@@ -189,11 +189,12 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		return fmt.Errorf("Error getting list of units: %v", err)
 	}
 
-	unitActiveStateCounts := map[string]int{}
+	activeCount := 0
 	loadedCount := 0
 	for _, unit := range units {
-		unitActiveStateCounts[unit.ActiveState]++
-
+		if unit.ActiveState == unitActiveState {
+			activeCount++
+		}
 		if unit.LoadState == unitLoadedState {
 			loadedCount++
 		}
@@ -221,9 +222,7 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		}
 	}
 
-	for _, activeState := range unitActiveStateList {
-		sender.Gauge(activeState.metricName, float64(unitActiveStateCounts[activeState.activeState]), "", nil)
-	}
+	sender.Gauge("systemd.unit.active.count", float64(activeCount), "", nil)
 	sender.Gauge("systemd.unit.loaded.count", float64(loadedCount), "", nil)
 
 	return nil
