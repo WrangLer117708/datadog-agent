@@ -30,6 +30,7 @@ const (
 	unitSubStateTag    = "sub_state"
 
 	unitActiveState = "active"
+	unitLoadedState = "loaded"
 
 	unitTypeUnit    = "Unit"
 	unitTypeService = "Service"
@@ -38,7 +39,7 @@ const (
 
 	canConnectServiceCheck      = "systemd.can_connect"
 	systemStateServiceCheck     = "systemd.system_state"
-	unitActiveStateServiceCheck = "systemd.unit.active_state"
+	unitActiveStateServiceCheck = "systemd.unit"
 )
 
 // serviceUnitConfig is a config/mapping of services properties (a service is a unit of service type).
@@ -61,11 +62,8 @@ var unitActiveStateList = []struct {
 	metricName  string
 	activeState string
 }{
-	{"systemd.unit.active_state.active.count", "active"},
-	{"systemd.unit.active_state.activating.count", "activating"},
-	{"systemd.unit.active_state.inactive.count", "inactive"},
-	{"systemd.unit.active_state.deactivating.count", "deactivating"},
-	{"systemd.unit.active_state.failed.count", "failed"},
+	{"systemd.unit.active.count", "active"},
+	{"systemd.unit.failed.count", "failed"},
 }
 
 var systemdStatusMapping = map[string]metrics.ServiceCheckStatus{
@@ -192,9 +190,14 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		return fmt.Errorf("Error getting list of units: %v", err)
 	}
 
-	unitCounts := map[string]int{}
+	unitActiveStateCounts := map[string]int{}
+	loadedCount := 0
 	for _, unit := range units {
-		unitCounts[unit.ActiveState]++
+		unitActiveStateCounts[unit.ActiveState]++
+
+		if unit.LoadState == unitLoadedState {
+			loadedCount++
+		}
 
 		if !c.isMonitored(unit.Name) {
 			continue
@@ -220,9 +223,9 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 	}
 
 	for _, activeState := range unitActiveStateList {
-		sender.Gauge(activeState.metricName, float64(unitCounts[activeState.activeState]), "", nil)
+		sender.Gauge(activeState.metricName, float64(unitActiveStateCounts[activeState.activeState]), "", nil)
 	}
-	sender.Gauge("systemd.unit.count", float64(len(units)), "", nil)
+	sender.Gauge("systemd.unit.loaded.count", float64(loadedCount), "", nil)
 
 	return nil
 }

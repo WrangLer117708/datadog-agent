@@ -214,14 +214,14 @@ func TestOverallMetrics(t *testing.T) {
 	// setup data
 	stats := createDefaultMockSystemdStats()
 	stats.On("ListUnits", mock.Anything).Return([]dbus.UnitStatus{
-		{Name: "unit1.service", ActiveState: "active", SubState: "my_substate"},
-		{Name: "unit2.service", ActiveState: "active", SubState: "my_substate"},
-		{Name: "unit3.service", ActiveState: "active", SubState: "my_substate"},
-		{Name: "unit4.service", ActiveState: "inactive", SubState: "my_substate"},
-		{Name: "unit5.service", ActiveState: "inactive", SubState: "my_substate"},
-		{Name: "unit6.service", ActiveState: "activating", SubState: "my_substate"},
-		{Name: "unit7.service", ActiveState: "deactivating", SubState: "my_substate"},
-		{Name: "unit8.service", ActiveState: "failed", SubState: "my_substate"},
+		{Name: "unit1.service", ActiveState: "active", SubState: "my_substate", LoadState: "loaded"},
+		{Name: "unit2.service", ActiveState: "active", SubState: "my_substate", LoadState: "loaded"},
+		{Name: "unit3.service", ActiveState: "active", SubState: "my_substate", LoadState: "loaded"},
+		{Name: "unit4.service", ActiveState: "inactive", SubState: "my_substate", LoadState: "not-found"},
+		{Name: "unit5.service", ActiveState: "inactive", SubState: "my_substate", LoadState: "not-found"},
+		{Name: "unit6.service", ActiveState: "activating", SubState: "my_substate", LoadState: "loaded"},
+		{Name: "unit7.service", ActiveState: "deactivating", SubState: "my_substate", LoadState: "loaded"},
+		{Name: "unit8.service", ActiveState: "failed", SubState: "my_substate", LoadState: "loaded"},
 	}, nil)
 
 	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, unitTypeService).Return(map[string]interface{}{
@@ -249,15 +249,12 @@ unit_names:
 	mockSender.AssertCalled(t, "ServiceCheck", canConnectServiceCheck, metrics.ServiceCheckOK, "", []string(nil), mock.Anything)
 	mockSender.AssertCalled(t, "ServiceCheck", systemStateServiceCheck, metrics.ServiceCheckOK, "", []string(nil), mock.Anything)
 
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.active.count", float64(3), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.activating.count", float64(1), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.inactive.count", float64(2), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.deactivating.count", float64(1), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.failed.count", float64(1), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.count", float64(8), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active.count", float64(3), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.failed.count", float64(1), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.loaded.count", float64(6), "", []string(nil))
 
 	mockSender.AssertNumberOfCalls(t, "ServiceCheck", 2)
-	mockSender.AssertNumberOfCalls(t, "Gauge", 6)
+	mockSender.AssertNumberOfCalls(t, "Gauge", 3)
 	mockSender.AssertNumberOfCalls(t, "Commit", 1)
 }
 
@@ -338,8 +335,8 @@ unit_names:
 	tags = []string{"unit:unit3.service"}
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
 
-	expectedGaugeCalls := 6     /* 3 overall metrics */
-	expectedGaugeCalls += 2 * 6 /* 2 * 6 unit/service metrics */
+	expectedGaugeCalls := 3     /* overall metrics */
+	expectedGaugeCalls += 2 * 6 /* unit/service metrics */
 	mockSender.AssertNumberOfCalls(t, "Gauge", expectedGaugeCalls)
 	mockSender.AssertNumberOfCalls(t, "Commit", 1)
 }
