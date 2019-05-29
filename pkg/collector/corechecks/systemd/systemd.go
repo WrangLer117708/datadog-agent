@@ -36,7 +36,9 @@ const (
 
 	serviceSuffix = "service"
 
-	canConnectServiceCheckName = "systemd.can_connect"
+	systemdCanConnectServiceCheck = "systemd.can_connect"
+	systemdStateServiceCheck      = "systemd.state"
+	systemdUnitStateServiceCheck  = "systemd.unit.state"
 )
 
 // serviceUnitConfig is a config/mapping of services properties (a service is a unit of service type).
@@ -70,9 +72,9 @@ var systemdStatusMapping = map[string]metrics.ServiceCheckStatus{
 	"initializing": metrics.ServiceCheckUnknown,
 	"starting":     metrics.ServiceCheckUnknown,
 	"running":      metrics.ServiceCheckOK,
-	"degraded":     metrics.ServiceCheckWarning,
-	"maintenance":  metrics.ServiceCheckUnknown,
-	"stopping":     metrics.ServiceCheckUnknown,
+	"degraded":     metrics.ServiceCheckCritical,
+	"maintenance":  metrics.ServiceCheckCritical,
+	"stopping":     metrics.ServiceCheckCritical,
 }
 
 // Check aggregates metrics from one Check instance
@@ -160,16 +162,17 @@ func (c *Check) getConn(sender aggregator.Sender) (*dbus.Conn, error) {
 	conn, err := c.stats.NewConn()
 	if err != nil {
 		newErr := fmt.Errorf("Cannot create a connection: %v", err)
-		sender.ServiceCheck(canConnectServiceCheckName, metrics.ServiceCheckCritical, "", nil, newErr.Error())
+		sender.ServiceCheck(systemdCanConnectServiceCheck, metrics.ServiceCheckCritical, "", nil, newErr.Error())
 		return nil, newErr
 	}
 
 	prop, err := c.stats.SystemState(conn)
 	if err != nil {
 		newErr := fmt.Errorf("Err calling SystemState: %v", err)
-		sender.ServiceCheck(canConnectServiceCheckName, metrics.ServiceCheckCritical, "", nil, newErr.Error())
+		sender.ServiceCheck(systemdCanConnectServiceCheck, metrics.ServiceCheckCritical, "", nil, newErr.Error())
 		return nil, newErr
 	}
+	sender.ServiceCheck(systemdCanConnectServiceCheck, metrics.ServiceCheckOK, "", nil, "")
 
 	serviceCheckStatus := metrics.ServiceCheckUnknown
 	systemState, ok := prop.Value.Value().(string)
@@ -179,7 +182,7 @@ func (c *Check) getConn(sender aggregator.Sender) (*dbus.Conn, error) {
 			serviceCheckStatus = status
 		}
 	}
-	sender.ServiceCheck(canConnectServiceCheckName, serviceCheckStatus, "", nil, fmt.Sprintf("Systemd status is %v", prop.Value))
+	sender.ServiceCheck(systemdStateServiceCheck, serviceCheckStatus, "", nil, fmt.Sprintf("Systemd status is %v", prop.Value))
 	return conn, nil
 }
 
@@ -205,7 +208,7 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		sender.Gauge("systemd.unit.monitored", 1, "", monitoredTags)
 
 		tags := []string{unitTag + ":" + unit.Name}
-		sender.ServiceCheck("systemd.unit.status", getServiceCheckStatus(unit.ActiveState), "", tags, "")
+		sender.ServiceCheck(systemdUnitStateServiceCheck, getServiceCheckStatus(unit.ActiveState), "", tags, "")
 		c.submitMonitoredUnitMetrics(sender, conn, unit, tags)
 
 		if unit.ActiveState != unitActiveState {
