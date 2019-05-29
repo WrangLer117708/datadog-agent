@@ -384,27 +384,27 @@ unit_names:
 	tags := []string{"unit:unit1.service", "active_state:active", "sub_state:my_substate"}
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.monitored", mock.Anything, "", tags)
 	tags = []string{"unit:unit1.service"}
-	mockSender.AssertCalled(t, "ServiceCheck", unitActiveStateServiceCheck, metrics.ServiceCheckOK, "", tags, "")
+	mockSender.AssertCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckOK, "", tags, "")
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.uptime", mock.Anything, "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
 
 	tags = []string{"unit:unit2.service", "active_state:inactive", "sub_state:my_substate"}
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.monitored", mock.Anything, "", tags)
 	tags = []string{"unit:unit2.service"}
-	mockSender.AssertCalled(t, "ServiceCheck", unitActiveStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
+	mockSender.AssertCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.uptime", mock.Anything, "", tags)
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
 
 	tags = []string{"unit:unit3.service", "active_state:failed", "sub_state:my_substate"}
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.monitored", mock.Anything, "", tags)
 	tags = []string{"unit:unit3.service"}
-	mockSender.AssertCalled(t, "ServiceCheck", unitActiveStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
+	mockSender.AssertCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
 
 	tags = []string{"unit:unit4.service", "active_state:failed", "sub_state:my_substate"}
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.monitored", mock.Anything, "", tags)
 	tags = []string{"unit:unit4.service"}
-	mockSender.AssertNotCalled(t, "ServiceCheck", unitActiveStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
+	mockSender.AssertNotCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
 }
 
@@ -454,13 +454,13 @@ unit_names:
 	mockSender.AssertCalled(t, "ServiceCheck", systemStateServiceCheck, metrics.ServiceCheckOK, "", []string(nil), mock.Anything)
 
 	tags := []string{"unit:unit1.service"}
-	mockSender.AssertCalled(t, "ServiceCheck", unitActiveStateServiceCheck, metrics.ServiceCheckOK, "", tags, "")
+	mockSender.AssertCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckOK, "", tags, "")
 
 	tags = []string{"unit:unit2.service"}
-	mockSender.AssertCalled(t, "ServiceCheck", unitActiveStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
+	mockSender.AssertCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
 
 	tags = []string{"unit:unit3.service"}
-	mockSender.AssertNotCalled(t, "ServiceCheck", unitActiveStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
+	mockSender.AssertNotCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
 
 	mockSender.AssertNumberOfCalls(t, "ServiceCheck", 4)
 	mockSender.AssertNumberOfCalls(t, "Commit", 1)

@@ -37,9 +37,9 @@ const (
 
 	serviceSuffix = "service"
 
-	canConnectServiceCheck      = "systemd.can_connect"
-	systemStateServiceCheck     = "systemd.system_state"
-	unitActiveStateServiceCheck = "systemd.unit"
+	canConnectServiceCheck  = "systemd.can_connect"
+	systemStateServiceCheck = "systemd.system.state"
+	unitStateServiceCheck   = "systemd.unit.state"
 )
 
 // serviceUnitConfig is a config/mapping of services properties (a service is a unit of service type).
@@ -211,7 +211,7 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		sender.Gauge("systemd.unit.monitored", 1, "", monitoredTags)
 
 		tags := []string{unitTag + ":" + unit.Name}
-		sender.ServiceCheck(unitActiveStateServiceCheck, getServiceCheckStatus(unit.ActiveState), "", tags, "")
+		sender.ServiceCheck(unitStateServiceCheck, getServiceCheckStatus(unit.ActiveState), "", tags, "")
 		c.submitMonitoredUnitMetrics(sender, conn, unit, tags)
 
 		if unit.ActiveState != unitActiveState {
