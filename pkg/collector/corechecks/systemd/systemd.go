@@ -61,11 +61,11 @@ var unitActiveStateList = []struct {
 	metricName  string
 	activeState string
 }{
-	{"systemd.unit.active.count", "active"},
-	{"systemd.unit.activating.count", "activating"},
-	{"systemd.unit.inactive.count", "inactive"},
-	{"systemd.unit.deactivating.count", "deactivating"},
-	{"systemd.unit.failed.count", "failed"},
+	{"systemd.unit.active_state.active.count", "active"},
+	{"systemd.unit.active_state.activating.count", "activating"},
+	{"systemd.unit.active_state.inactive.count", "inactive"},
+	{"systemd.unit.active_state.deactivating.count", "deactivating"},
+	{"systemd.unit.active_state.failed.count", "failed"},
 }
 
 var systemdStatusMapping = map[string]metrics.ServiceCheckStatus{
@@ -222,7 +222,7 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 	for _, activeState := range unitActiveStateList {
 		sender.Gauge(activeState.metricName, float64(unitCounts[activeState.activeState]), "", nil)
 	}
-	sender.Gauge("systemd.unit.all.count", float64(len(units)), "", nil)
+	sender.Gauge("systemd.unit.count", float64(len(units)), "", nil)
 
 	return nil
 }

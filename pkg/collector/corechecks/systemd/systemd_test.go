@@ -249,12 +249,12 @@ unit_names:
 	mockSender.AssertCalled(t, "ServiceCheck", canConnectServiceCheck, metrics.ServiceCheckOK, "", []string(nil), mock.Anything)
 	mockSender.AssertCalled(t, "ServiceCheck", systemStateServiceCheck, metrics.ServiceCheckOK, "", []string(nil), mock.Anything)
 
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active.count", float64(3), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.activating.count", float64(1), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.inactive.count", float64(2), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.deactivating.count", float64(1), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.failed.count", float64(1), "", []string(nil))
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.all.count", float64(8), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.active.count", float64(3), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.activating.count", float64(1), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.inactive.count", float64(2), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.deactivating.count", float64(1), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active_state.failed.count", float64(1), "", []string(nil))
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.count", float64(8), "", []string(nil))
 
 	mockSender.AssertNumberOfCalls(t, "ServiceCheck", 2)
 	mockSender.AssertNumberOfCalls(t, "Gauge", 6)
