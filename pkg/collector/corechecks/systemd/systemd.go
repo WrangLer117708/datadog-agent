@@ -63,7 +63,6 @@ var unitActiveStateList = []struct {
 	activeState string
 }{
 	{"systemd.unit.active.count", "active"},
-	{"systemd.unit.failed.count", "failed"},
 }
 
 var systemdStatusMapping = map[string]metrics.ServiceCheckStatus{
