@@ -68,21 +68,25 @@ func (b *BatchSender) run() {
 		select {
 		case payload, isOpen := <-b.inputChan:
 			if !isOpen {
-				// inputChan has been closed, no more payload are expected
+				// inputChan has been closed, no more payload are expected,
+				// flush the remaining messages.
 				b.sendBuffer()
 				return
 			}
-			success := b.messageBuffer.TryAddMessage(payload)
-			if !success || b.messageBuffer.IsFull() {
+			ok := b.messageBuffer.TryAddMessage(payload)
+			if !ok || b.messageBuffer.IsFull() {
 				// message buffer is full, either reaching maxBatchCount of maxRequestSize
-				// send request now. reset the timer
+				// send request now.
 				if !flushTimer.Stop() {
-					<-flushTimer.C
+					select {
+					case <-flushTimer.C:
+					default:
+					}
 				}
 				b.sendBuffer()
 				flushTimer.Reset(b.batchTimeout)
 			}
-			if !success {
+			if !ok {
 				// it's possible we didn't append last try because maxRequestSize is reached
 				// append it again after the sendbuffer is flushed
 				b.messageBuffer.TryAddMessage(payload)
