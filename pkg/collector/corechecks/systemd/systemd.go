@@ -163,7 +163,7 @@ func (c *Check) getConn(sender aggregator.Sender) (*dbus.Conn, error) {
 		return nil, newErr
 	}
 
-	prop, err := c.stats.SystemState(conn)
+	systemStateProp, err := c.stats.SystemState(conn)
 	if err != nil {
 		newErr := fmt.Errorf("Err calling SystemState: %v", err)
 		sender.ServiceCheck(canConnectServiceCheck, metrics.ServiceCheckCritical, "", nil, newErr.Error())
@@ -172,14 +172,14 @@ func (c *Check) getConn(sender aggregator.Sender) (*dbus.Conn, error) {
 	sender.ServiceCheck(canConnectServiceCheck, metrics.ServiceCheckOK, "", nil, "")
 
 	serviceCheckStatus := metrics.ServiceCheckUnknown
-	systemState, ok := prop.Value.Value().(string)
+	systemState, ok := systemStateProp.Value.Value().(string)
 	if ok {
 		status, ok := systemdStatusMapping[systemState]
 		if ok {
 			serviceCheckStatus = status
 		}
 	}
-	sender.ServiceCheck(systemStateServiceCheck, serviceCheckStatus, "", nil, fmt.Sprintf("Systemd status is %v", prop.Value))
+	sender.ServiceCheck(systemStateServiceCheck, serviceCheckStatus, "", nil, fmt.Sprintf("Systemd status is %v", systemStateProp.Value))
 	return conn, nil
 }
 
