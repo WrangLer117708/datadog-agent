@@ -52,10 +52,10 @@ type serviceUnitConfig struct {
 }
 
 var serviceUnitConfigList = []serviceUnitConfig{
-	{metricName: "systemd.unit.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", required: true},
-	{metricName: "systemd.unit.memory_current", propertyName: "MemoryCurrent", accountingProperty: "MemoryAccounting", required: true},
-	{metricName: "systemd.unit.tasks_current", propertyName: "TasksCurrent", accountingProperty: "TasksAccounting", required: true},
-	{metricName: "systemd.unit.n_restarts", propertyName: "NRestarts", accountingProperty: "", required: false}, // only present from systemd v235
+	{metricName: "systemd.service.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", required: true},
+	{metricName: "systemd.service.memory_current", propertyName: "MemoryCurrent", accountingProperty: "MemoryAccounting", required: true},
+	{metricName: "systemd.service.tasks_current", propertyName: "TasksCurrent", accountingProperty: "TasksAccounting", required: true},
+	{metricName: "systemd.service.n_restarts", propertyName: "NRestarts", accountingProperty: "", required: false}, // only present from systemd v235
 }
 
 var unitActiveStates = []string{"active", "activating", "inactive", "deactivating", "failed"}
@@ -294,6 +294,7 @@ func sendPropertyAsGauge(sender aggregator.Sender, properties map[string]interfa
 	return nil
 }
 
+// computeUptime returns uptime in microseconds
 func computeUptime(activeState string, activeEnterTimestampMicroSec uint64, nanoNow int64) int64 {
 	if activeState != unitActiveState {
 		return 0

@@ -320,22 +320,22 @@ unit_names:
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.uptime", float64(900), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active", float64(1), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.loaded", float64(1), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", float64(10), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.memory_current", float64(20), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.tasks_current", float64(30), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.n_restarts", float64(40), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", float64(10), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.memory_current", float64(20), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.tasks_current", float64(30), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.n_restarts", float64(40), "", tags)
 
 	tags = []string{"unit:unit2.service"}
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.uptime", float64(800), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active", float64(1), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.loaded", float64(1), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", float64(110), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.memory_current", float64(120), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.tasks_current", float64(130), "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.n_restarts", float64(140), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", float64(110), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.memory_current", float64(120), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.tasks_current", float64(130), "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.n_restarts", float64(140), "", tags)
 
 	tags = []string{"unit:unit3.service"}
-	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
+	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", mock.Anything, "", tags)
 
 	expectedGaugeCalls := 6     /* overall metrics */
 	expectedGaugeCalls += 2 * 7 /* unit/service metrics */
@@ -389,22 +389,22 @@ unit_names:
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active", float64(1), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.loaded", float64(1), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.uptime", mock.Anything, "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", mock.Anything, "", tags)
 
 	tags = []string{"unit:unit2.service"}
 	mockSender.AssertCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.uptime", mock.Anything, "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active", float64(0), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.loaded", float64(0), "", tags)
-	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
+	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", mock.Anything, "", tags)
 
 	tags = []string{"unit:unit3.service"}
 	mockSender.AssertCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
-	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
+	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", mock.Anything, "", tags)
 
 	tags = []string{"unit:unit4.service"}
 	mockSender.AssertNotCalled(t, "ServiceCheck", unitStateServiceCheck, metrics.ServiceCheckCritical, "", tags, "")
-	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
+	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", mock.Anything, "", tags)
 }
 
 func TestMonitoredUnitsServiceCheck(t *testing.T) {
@@ -515,23 +515,23 @@ unit_names:
 	mockSender.AssertCalled(t, "ServiceCheck", canConnectServiceCheck, metrics.ServiceCheckOK, "", []string(nil), mock.Anything)
 
 	tags := []string{"unit:unit1.service"}
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.memory_current", mock.Anything, "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.tasks_current", mock.Anything, "", tags)
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.n_restarts", mock.Anything, "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", mock.Anything, "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.memory_current", mock.Anything, "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.tasks_current", mock.Anything, "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.n_restarts", mock.Anything, "", tags)
 
 	tags = []string{"unit:unit2.service"}
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
-	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.memory_current", mock.Anything, "", tags)
-	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.tasks_current", mock.Anything, "", tags)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", mock.Anything, "", tags)
+	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.memory_current", mock.Anything, "", tags)
+	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.tasks_current", mock.Anything, "", tags)
 }
 
 func TestSendPropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
 	serviceProperties := getCreatePropertieWithDefaults(map[string]interface{}{
 		"CPUUsageNSec": uint64(110),
 	})
-	serviceUnitConfigCPU := serviceUnitConfig{metricName: "systemd.unit.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", required: true}
-	serviceUnitConfigNRestart := serviceUnitConfig{metricName: "systemd.unit.n_restarts", propertyName: "NRestarts", accountingProperty: "", required: true}
+	serviceUnitConfigCPU := serviceUnitConfig{metricName: "systemd.service.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", required: true}
+	serviceUnitConfigNRestart := serviceUnitConfig{metricName: "systemd.service.n_restarts", propertyName: "NRestarts", accountingProperty: "", required: true}
 
 	check := Check{}
 	mockSender := mocksender.NewMockSender(check.ID())
@@ -540,8 +540,8 @@ func TestSendPropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
 	sendPropertyAsGauge(mockSender, serviceProperties, serviceUnitConfigCPU, nil)
 	sendPropertyAsGauge(mockSender, serviceProperties, serviceUnitConfigNRestart, nil)
 
-	mockSender.AssertCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", float64(110), "", []string(nil))
-	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.n_restarts", mock.Anything, mock.Anything, mock.Anything)
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", float64(110), "", []string(nil))
+	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.n_restarts", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestGetServiceCheckStatus(t *testing.T) {
