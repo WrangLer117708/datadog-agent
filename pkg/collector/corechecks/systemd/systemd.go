@@ -240,6 +240,16 @@ func (c *Check) submitMonitoredUnitMetrics(sender aggregator.Sender, conn *dbus.
 		log.Errorf("Error getting property ActiveEnterTimestamp: %v", err)
 		return
 	}
+	active := 0
+	if unit.ActiveState == unitActiveState {
+		active = 1
+	}
+	loaded := 0
+	if unit.LoadState == unitLoadedState {
+		loaded = 1
+	}
+	sender.Gauge("systemd.unit.active", float64(active), "", tags)
+	sender.Gauge("systemd.unit.loaded", float64(loaded), "", tags)
 	sender.Gauge("systemd.unit.uptime", float64(computeUptime(unit.ActiveState, ActiveEnterTimestamp, c.stats.TimeNanoNow())), "", tags)
 }
 
