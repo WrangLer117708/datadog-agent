@@ -9,11 +9,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/util/log"
-
 	"github.com/DataDog/datadog-agent/pkg/logs/client"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
-	"github.com/DataDog/datadog-agent/pkg/logs/metrics"
 )
 
 const (
@@ -26,7 +23,7 @@ const (
 type BatchSender struct {
 	inputChan     chan *message.Message
 	outputChan    chan *message.Message
-	destinations  *client.Destinations
+	sender        *sender
 	done          chan struct{}
 	batchTimeout  time.Duration
 	messageBuffer *MessageBuffer
@@ -37,7 +34,7 @@ func NewBatchSender(inputChan, outputChan chan *message.Message, destinations *c
 	return &BatchSender{
 		inputChan:     inputChan,
 		outputChan:    outputChan,
-		destinations:  destinations,
+		sender:        newSender(destinations),
 		done:          make(chan struct{}),
 		batchTimeout:  batchTimeout,
 		messageBuffer: NewMessageBuffer(maxBatchSize, maxContentSize),
@@ -45,36 +42,36 @@ func NewBatchSender(inputChan, outputChan chan *message.Message, destinations *c
 }
 
 // Start starts the BatchSender
-func (b *BatchSender) Start() {
-	go b.run()
+func (s *BatchSender) Start() {
+	go s.run()
 }
 
 // Stop stops the BatchSender,
 // this call blocks until inputChan is flushed
-func (b *BatchSender) Stop() {
-	close(b.inputChan)
-	<-b.done
+func (s *BatchSender) Stop() {
+	close(s.inputChan)
+	<-s.done
 }
 
 // run lets the BatchSender send messages.
-func (b *BatchSender) run() {
-	flushTimer := time.NewTimer(b.batchTimeout)
+func (s *BatchSender) run() {
+	flushTimer := time.NewTimer(s.batchTimeout)
 	defer func() {
 		flushTimer.Stop()
-		b.done <- struct{}{}
+		s.done <- struct{}{}
 	}()
 
 	for {
 		select {
-		case payload, isOpen := <-b.inputChan:
+		case payload, isOpen := <-s.inputChan:
 			if !isOpen {
 				// inputChan has been closed, no more payload are expected,
 				// flush the remaining messages.
-				b.sendBuffer()
+				s.sendBuffer()
 				return
 			}
-			ok := b.messageBuffer.TryAddMessage(payload)
-			if !ok || b.messageBuffer.IsFull() {
+			ok := s.messageBuffer.TryAddMessage(payload)
+			if !ok || s.messageBuffer.IsFull() {
 				// message buffer is full, either reaching maxBatchCount of maxRequestSize
 				// send request now.
 				if !flushTimer.Stop() {
@@ -83,65 +80,48 @@ func (b *BatchSender) run() {
 					default:
 					}
 				}
-				b.sendBuffer()
-				flushTimer.Reset(b.batchTimeout)
+				s.sendBuffer()
+				flushTimer.Reset(s.batchTimeout)
 			}
 			if !ok {
 				// it's possible we didn't append last try because maxRequestSize is reached
 				// append it again after the sendbuffer is flushed
-				b.messageBuffer.TryAddMessage(payload)
+				s.messageBuffer.TryAddMessage(payload)
 			}
 		case <-flushTimer.C:
 			// the timout expired, the content is ready to be sent
-			b.sendBuffer()
-			flushTimer.Reset(b.batchTimeout)
+			s.sendBuffer()
+			flushTimer.Reset(s.batchTimeout)
 		}
 	}
 }
 
-// send keeps trying to send the message to the main destination until it succeeds
+// sendBuffer keeps trying to send the message to the main destination until it succeeds
 // and try to send the message to the additional destinations only once.
-func (b *BatchSender) sendBuffer() {
-	if b.messageBuffer.IsEmpty() {
+func (s *BatchSender) sendBuffer() {
+	if s.messageBuffer.IsEmpty() {
 		return
 	}
 
-	batchedContent := b.messageBuffer.GetPayload()
-	defer b.messageBuffer.Clear()
+	batchedContent := s.messageBuffer.GetPayload()
+	defer s.messageBuffer.Clear()
 
-	for {
-		// this call is blocking until payload is sent (or the connection destination context cancelled)
-		err := b.destinations.Main.Send(batchedContent)
-		if err != nil {
-			metrics.DestinationErrors.Add(1)
-			if err == context.Canceled {
-				// the context was cancelled, agent is stopping non-gracefully.
-				// drop the message
-				return
-			}
-
-			switch err.(type) {
-			case *client.RetryableError:
-				// could not send the payload because of a transport issue,
-				// let's retry.
-				continue
-			}
-
-			log.Warnf("Could not send payload, dropping it: %v", err)
-			break
-		}
-
-		for _, destination := range b.destinations.Additionals {
-			// send to a queue then send asynchronously for additional endpoints,
-			// it will drop messages if the queue is full
-			destination.SendAsync(batchedContent)
-		}
-
-		metrics.LogsSent.Add(1)
+	// this call is blocking until the payload gets sent
+	// or the connection context got cancelled
+	err := s.sender.send(batchedContent)
+	switch err {
+	case context.Canceled:
+		// the context was cancelled, the agent is stopping non-gracefully,
+		// drop the message
+		return
+	default:
+		// the sender could not sent the payload,
+		// this can happen when the payload can not be frammed properly,
+		// or the client is configured with a wrong url or a wrong API key.
 		break
 	}
 
-	for _, m := range b.messageBuffer.GetMessages() {
-		b.outputChan <- m
+	for _, message := range s.messageBuffer.GetMessages() {
+		s.outputChan <- message
 	}
 }

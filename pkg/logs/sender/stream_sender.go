@@ -8,17 +8,15 @@ package sender
 import (
 	"context"
 
-	"github.com/DataDog/datadog-agent/pkg/util/log"
-
 	"github.com/DataDog/datadog-agent/pkg/logs/client"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
-	"github.com/DataDog/datadog-agent/pkg/logs/metrics"
 )
 
 // StreamSender sends one log at a time to different destinations.
 type StreamSender struct {
 	inputChan    chan *message.Message
 	outputChan   chan *message.Message
+	sender       *sender
 	destinations *client.Destinations
 	done         chan struct{}
 }
@@ -28,6 +26,7 @@ func NewStreamSender(inputChan, outputChan chan *message.Message, destinations *
 	return &StreamSender{
 		inputChan:    inputChan,
 		outputChan:   outputChan,
+		sender:       newSender(destinations),
 		destinations: destinations,
 		done:         make(chan struct{}),
 	}
@@ -58,37 +57,20 @@ func (s *StreamSender) run() {
 
 // send keeps trying to send the message to the main destination until it succeeds
 // and try to send the message to the additional destinations only once.
-func (s *StreamSender) send(payload *message.Message) {
-	for {
-		// this call is blocking until payload is sent (or the connection destination context cancelled)
-		err := s.destinations.Main.Send(payload.Content)
-		if err != nil {
-			metrics.DestinationErrors.Add(1)
-			if err == context.Canceled {
-				// the context was cancelled, agent is stopping non-gracefully.
-				// drop the message
-				return
-			}
-
-			switch err.(type) {
-			case *client.RetryableError:
-				// could not send the payload because of a transport issue,
-				// let's retry.
-				continue
-			}
-
-			log.Warnf("Could not send payload, dropping it: %v", err)
-			break
-		}
-
-		for _, destination := range s.destinations.Additionals {
-			// send to a queue then send asynchronously for additional endpoints,
-			// it will drop messages if the queue is full
-			destination.SendAsync(payload.Content)
-		}
-
-		metrics.LogsSent.Add(1)
+func (s *StreamSender) send(message *message.Message) {
+	// this call is blocking until the payload gets sent
+	// or the connection context got cancelled
+	err := s.sender.send(message.Content)
+	switch err {
+	case context.Canceled:
+		// the context was cancelled, the agent is stopping non-gracefully,
+		// drop the message
+		return
+	default:
+		// the sender could not sent the payload,
+		// this can happen when the payload can not be frammed properly,
+		// or the client is configured with a wrong url or a wrong API key.
 		break
 	}
-	s.outputChan <- payload
+	s.outputChan <- message
 }
