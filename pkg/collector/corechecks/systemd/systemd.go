@@ -224,7 +224,7 @@ func (c *Check) submitMetrics(sender aggregator.Sender, conn *dbus.Conn) error {
 		return fmt.Errorf("Error getting list of units: %v", err)
 	}
 
-	c.submitCounts(sender, units)
+	c.submitCountMetrics(sender, units)
 
 	loadedCount := 0
 	for _, unit := range units {
@@ -270,7 +270,7 @@ func (c *Check) submitBasicUnitMetrics(sender aggregator.Sender, conn *dbus.Conn
 	sender.Gauge("systemd.unit.uptime", float64(computeUptime(unit.ActiveState, ActiveEnterTimestamp, c.stats.TimeNanoNow())), "", tags)
 }
 
-func (c *Check) submitCounts(sender aggregator.Sender, units []dbus.UnitStatus) {
+func (c *Check) submitCountMetrics(sender aggregator.Sender, units []dbus.UnitStatus) {
 	counts := map[string]int{}
 
 	for _, activeState := range unitActiveStates {

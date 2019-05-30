@@ -229,11 +229,13 @@ func TestMetricValues(t *testing.T) {
 	rawInstanceConfig := []byte(`
 unit_names:
  - unit1.service
+ - unit2.service
 `)
 
 	stats := createDefaultMockSystemdStats()
 	stats.On("ListUnits", mock.Anything).Return([]dbus.UnitStatus{
 		{Name: "unit1.service", ActiveState: "active", SubState: "my_substate", LoadState: "loaded"},
+		{Name: "unit2.service", ActiveState: "active", SubState: "my_substate", LoadState: "loaded"},
 	}, nil)
 	stats.On("TimeNanoNow").Return(int64(1000 * 1000))
 
@@ -243,8 +245,16 @@ unit_names:
 		"TasksCurrent":  uint64(30),
 		"NRestarts":     uint64(40),
 	}), nil)
-
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", dbusTypeMap[typeService]).Return(getCreatePropertieWithDefaults(map[string]interface{}{
+		"CPUUsageNSec":  uint64(110),
+		"MemoryCurrent": uint64(120),
+		"TasksCurrent":  uint64(130),
+		"NRestarts":     uint64(140),
+	}), nil)
 	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", dbusTypeMap[typeUnit]).Return(map[string]interface{}{
+		"ActiveEnterTimestamp": uint64(100),
+	}, nil)
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", dbusTypeMap[typeUnit]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(100),
 	}, nil)
 
@@ -271,13 +281,16 @@ unit_names:
 	mockSender.AssertCalled(t, "Gauge", "systemd.service.tasks_current", float64(30), "", tags)
 	mockSender.AssertCalled(t, "Gauge", "systemd.service.n_restarts", float64(40), "", tags)
 
-	expectedGaugeCalls := 6 /* overall metrics */
-	expectedGaugeCalls += 7 /* unit/service metrics */
+	tags = []string{"unit:unit2.service"}
+	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", float64(110), "", tags)
+
+	expectedGaugeCalls := 6     /* overall metrics */
+	expectedGaugeCalls += 2 * 7 /* unit/service metrics */
 	mockSender.AssertNumberOfCalls(t, "Gauge", expectedGaugeCalls)
 	mockSender.AssertNumberOfCalls(t, "Commit", 1)
 }
 
-func TestSubmitUnitMetricsLogic(t *testing.T) {
+func TestSubmitMetricsConditionals(t *testing.T) {
 	// setup data
 	rawInstanceConfig := []byte(`
 unit_names:
