@@ -47,27 +47,16 @@ var dbusTypeMap = map[string]string{
 	typeSocket:  "Socket",
 }
 
-type unit struct {
-	dbus.UnitStatus
-	TasksCurrent  uint64
-	NRestarts     uint32
-	CPUUsageNSec  uint64
-	CPUAccounting bool
-	// acceptedConnections uint32
-	// currentConnections  uint32
-	// refusedConnections  *uint32
-}
-
-// serviceUnitConfig is a config/mapping of services properties (a service is a unit of service type).
+// metricConfigItem is a config/mapping of services properties (a service is a unit of service type).
 // Each config define a metric to be monitored, how it should be retrieved and processed.
-type serviceUnitConfig struct {
+type metricConfigItem struct {
 	metricName         string
 	propertyName       string
 	accountingProperty string
 	optional           bool // if optional log as debug when there is an issue getting the property, otherwise log as error
 }
 
-var metricsConfig = map[string][]serviceUnitConfig{
+var metricConfigs = map[string][]metricConfigItem{
 	typeService: {
 		{
 			metricName:         "systemd.service.cpu_usage_n_sec",
@@ -297,7 +286,7 @@ func (c *Check) submitCounts(sender aggregator.Sender, units []dbus.UnitStatus) 
 }
 
 func (c *Check) submitPropertyMetricsAsGauge(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
-	for unitType := range metricsConfig {
+	for unitType := range metricConfigs {
 		if !strings.HasSuffix(unit.Name, "."+unitType) {
 			continue
 		}
@@ -306,7 +295,7 @@ func (c *Check) submitPropertyMetricsAsGauge(sender aggregator.Sender, conn *dbu
 			log.Errorf("Error getting serviceProperties for service: %s", unit.Name)
 			return
 		}
-		for _, service := range metricsConfig[unitType] {
+		for _, service := range metricConfigs[unitType] {
 			err := sendServicePropertyAsGauge(sender, serviceProperties, service, tags)
 			if err != nil {
 				msg := fmt.Sprintf("Cannot send property '%s' for unit '%s': %v", service.propertyName, unit.Name, err)
@@ -320,7 +309,7 @@ func (c *Check) submitPropertyMetricsAsGauge(sender aggregator.Sender, conn *dbu
 	}
 }
 
-func sendServicePropertyAsGauge(sender aggregator.Sender, properties map[string]interface{}, service serviceUnitConfig, tags []string) error {
+func sendServicePropertyAsGauge(sender aggregator.Sender, properties map[string]interface{}, service metricConfigItem, tags []string) error {
 	if service.accountingProperty != "" {
 		accounting, err := getPropertyBool(properties, service.accountingProperty)
 		if err != nil {

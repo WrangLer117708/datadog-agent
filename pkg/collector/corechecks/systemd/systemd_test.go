@@ -514,8 +514,8 @@ func TestSendServicePropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
 	serviceProperties := getCreatePropertieWithDefaults(map[string]interface{}{
 		"CPUUsageNSec": uint64(110),
 	})
-	serviceUnitConfigCPU := serviceUnitConfig{metricName: "systemd.service.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", optional: false}
-	serviceUnitConfigNRestart := serviceUnitConfig{metricName: "systemd.service.n_restarts", propertyName: "NRestarts", accountingProperty: "", optional: false}
+	serviceUnitConfigCPU := metricConfigItem{metricName: "systemd.service.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", optional: false}
+	serviceUnitConfigNRestart := metricConfigItem{metricName: "systemd.service.n_restarts", propertyName: "NRestarts", accountingProperty: "", optional: false}
 
 	check := Check{}
 	mockSender := mocksender.NewMockSender(check.ID())
