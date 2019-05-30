@@ -203,13 +203,6 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 			continue
 		}
 
-		monitoredTags := []string{
-			unitTag + ":" + unit.Name,
-			unitActiveStateTag + ":" + unit.ActiveState,
-			unitSubStateTag + ":" + unit.SubState,
-		}
-		sender.Gauge("systemd.unit.monitored", 1, "", monitoredTags)
-
 		tags := []string{unitTag + ":" + unit.Name}
 		sender.ServiceCheck(unitStateServiceCheck, getServiceCheckStatus(unit.ActiveState), "", tags, "")
 		c.submitMonitoredUnitMetrics(sender, conn, unit, tags)
