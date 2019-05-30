@@ -58,13 +58,6 @@ var serviceUnitConfigList = []serviceUnitConfig{
 	{metricName: "systemd.unit.n_restarts", propertyName: "NRestarts", accountingProperty: "", required: false}, // only present from systemd v235
 }
 
-var unitActiveStateList = []struct {
-	metricName  string
-	activeState string
-}{
-	{"systemd.unit.active.count", "active"},
-}
-
 var unitActiveStates = []string{"active", "activating", "inactive", "deactivating", "failed"}
 
 var systemdStatusMapping = map[string]metrics.ServiceCheckStatus{
@@ -193,12 +186,8 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 
 	c.submitCounts(sender, units)
 
-	activeCount := 0
 	loadedCount := 0
 	for _, unit := range units {
-		if unit.ActiveState == unitActiveState {
-			activeCount++
-		}
 		if unit.LoadState == unitLoadedState {
 			loadedCount++
 		}
@@ -219,7 +208,6 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		}
 	}
 
-	sender.Gauge("systemd.unit.active.count", float64(activeCount), "", nil)
 	sender.Gauge("systemd.unit.loaded.count", float64(loadedCount), "", nil)
 
 	return nil
