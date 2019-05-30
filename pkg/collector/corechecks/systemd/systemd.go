@@ -90,8 +90,10 @@ var metricConfigs = map[string][]metricConfigItem{
 			propertyName: "NConnections",
 		},
 		{
+			// only present from systemd v239
 			metricName:   "systemd.socket.n_refused",
 			propertyName: "NRefused",
+			optional:     true,
 		},
 	},
 }
