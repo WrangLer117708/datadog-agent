@@ -8,6 +8,7 @@ package systemd
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
@@ -67,7 +68,7 @@ type serviceUnitConfig struct {
 }
 
 var metricsConfig = map[string][]serviceUnitConfig{
-	"service": {
+	typeService: {
 		{
 			metricName:         "systemd.service.cpu_usage_n_sec",
 			propertyName:       "CPUUsageNSec",
@@ -90,20 +91,20 @@ var metricsConfig = map[string][]serviceUnitConfig{
 			optional:     true,
 		},
 	},
-	// "socket": {
-	// 	{
-	// 		metricName:   "systemd.socket.n_accepted",
-	// 		propertyName: "NAccepted",
-	// 	},
-	// 	{
-	// 		metricName:   "systemd.socket.n_connections",
-	// 		propertyName: "NConnections",
-	// 	},
-	// 	{
-	// 		metricName:   "systemd.socket.n_refused",
-	// 		propertyName: "NRefused",
-	// 	},
-	// },
+	typeSocket: {
+		{
+			metricName:   "systemd.socket.n_accepted",
+			propertyName: "NAccepted",
+		},
+		{
+			metricName:   "systemd.socket.n_connections",
+			propertyName: "NConnections",
+		},
+		{
+			metricName:   "systemd.socket.n_refused",
+			propertyName: "NRefused",
+		},
+	},
 }
 
 var unitActiveStates = []string{"active", "activating", "inactive", "deactivating", "failed"}
@@ -190,7 +191,7 @@ func (c *Check) Run() error {
 	}
 	defer c.stats.CloseConn(conn)
 
-	err = c.submitUnitMetrics(sender, conn)
+	err = c.submitMetrics(sender, conn)
 	if err != nil {
 		return err
 	}
@@ -226,7 +227,7 @@ func (c *Check) getDbusConn(sender aggregator.Sender) (*dbus.Conn, error) {
 	return conn, nil
 }
 
-func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) error {
+func (c *Check) submitMetrics(sender aggregator.Sender, conn *dbus.Conn) error {
 	units, err := c.stats.ListUnits(conn)
 	if err != nil {
 		return fmt.Errorf("Error getting list of units: %v", err)
@@ -239,27 +240,21 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		if unit.LoadState == unitLoadedState {
 			loadedCount++
 		}
-
 		if !c.isMonitored(unit.Name) {
 			continue
 		}
-
 		tags := []string{unitTag + ":" + unit.Name}
 		sender.ServiceCheck(unitStateServiceCheck, getServiceCheckStatus(unit.ActiveState), "", tags, "")
-		c.submitMonitoredUnitMetrics(sender, conn, unit, tags)
 
-		if unit.ActiveState != unitActiveState {
-			continue
-		}
+		c.submitBasicUnitMetrics(sender, conn, unit, tags)
 		c.submitPropertyMetricsAsGauge(sender, conn, unit, tags)
 	}
 
 	sender.Gauge("systemd.unit.loaded.count", float64(loadedCount), "", nil)
-
 	return nil
 }
 
-func (c *Check) submitMonitoredUnitMetrics(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
+func (c *Check) submitBasicUnitMetrics(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
 	unitProperties, err := c.stats.GetUnitTypeProperties(conn, unit.Name, dbusTypeMap[typeUnit])
 	if err != nil {
 		log.Errorf("Error getting unit unitProperties: %s", unit.Name)
@@ -303,6 +298,9 @@ func (c *Check) submitCounts(sender aggregator.Sender, units []dbus.UnitStatus) 
 
 func (c *Check) submitPropertyMetricsAsGauge(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
 	for unitType := range metricsConfig {
+		if !strings.HasSuffix(unit.Name, "."+unitType) {
+			continue
+		}
 		serviceProperties, err := c.stats.GetUnitTypeProperties(conn, unit.Name, dbusTypeMap[unitType])
 		if err != nil {
 			log.Errorf("Error getting serviceProperties for service: %s", unit.Name)
