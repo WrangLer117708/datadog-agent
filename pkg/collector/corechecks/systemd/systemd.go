@@ -300,9 +300,9 @@ func (c *Check) submitPropertyMetricsAsGauge(sender aggregator.Sender, conn *dbu
 			if err != nil {
 				msg := fmt.Sprintf("Cannot send property '%s' for unit '%s': %v", service.propertyName, unit.Name, err)
 				if service.optional {
-					log.Errorf(msg)
-				} else {
 					log.Debugf(msg)
+				} else {
+					log.Errorf(msg)
 				}
 			}
 		}
