@@ -34,6 +34,7 @@ const (
 
 	unitTypeUnit    = "Unit"
 	unitTypeService = "Service"
+	unitTypeSocket  = "Socket"
 
 	serviceSuffix = "service"
 
@@ -136,7 +137,7 @@ func (c *Check) Run() error {
 		return err
 	}
 
-	conn, err := c.getConn(sender)
+	conn, err := c.getDbusConn(sender)
 	if err != nil {
 		return err
 	}
@@ -150,7 +151,7 @@ func (c *Check) Run() error {
 	return nil
 }
 
-func (c *Check) getConn(sender aggregator.Sender) (*dbus.Conn, error) {
+func (c *Check) getDbusConn(sender aggregator.Sender) (*dbus.Conn, error) {
 	conn, err := c.stats.NewConn()
 	if err != nil {
 		newErr := fmt.Errorf("Cannot create a connection: %v", err)
@@ -263,7 +264,7 @@ func (c *Check) submitServiceMetrics(sender aggregator.Sender, conn *dbus.Conn, 
 	}
 
 	for _, service := range serviceUnitConfigList {
-		err := sendPropertyAsGauge(sender, serviceProperties, service, tags)
+		err := sendServicePropertyAsGauge(sender, serviceProperties, service, tags)
 		if err != nil {
 			msg := fmt.Sprintf("Cannot send property '%s' for unit '%s': %v", service.propertyName, unit.Name, err)
 			if service.required {
@@ -275,7 +276,7 @@ func (c *Check) submitServiceMetrics(sender aggregator.Sender, conn *dbus.Conn, 
 	}
 }
 
-func sendPropertyAsGauge(sender aggregator.Sender, properties map[string]interface{}, service serviceUnitConfig, tags []string) error {
+func sendServicePropertyAsGauge(sender aggregator.Sender, properties map[string]interface{}, service serviceUnitConfig, tags []string) error {
 	if service.accountingProperty != "" {
 		accounting, err := getPropertyBool(properties, service.accountingProperty)
 		if err != nil {

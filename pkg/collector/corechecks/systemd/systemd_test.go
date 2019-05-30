@@ -526,7 +526,7 @@ unit_names:
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.tasks_current", mock.Anything, "", tags)
 }
 
-func TestSendPropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
+func TestsendServicePropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
 	serviceProperties := getCreatePropertieWithDefaults(map[string]interface{}{
 		"CPUUsageNSec": uint64(110),
 	})
@@ -537,8 +537,8 @@ func TestSendPropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
 	mockSender := mocksender.NewMockSender(check.ID())
 	mockSender.On("Gauge", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return()
 
-	sendPropertyAsGauge(mockSender, serviceProperties, serviceUnitConfigCPU, nil)
-	sendPropertyAsGauge(mockSender, serviceProperties, serviceUnitConfigNRestart, nil)
+	sendServicePropertyAsGauge(mockSender, serviceProperties, serviceUnitConfigCPU, nil)
+	sendServicePropertyAsGauge(mockSender, serviceProperties, serviceUnitConfigNRestart, nil)
 
 	mockSender.AssertCalled(t, "Gauge", "systemd.service.cpu_usage_n_sec", float64(110), "", []string(nil))
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.n_restarts", mock.Anything, mock.Anything, mock.Anything)
