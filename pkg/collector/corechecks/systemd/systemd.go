@@ -8,7 +8,6 @@ package systemd
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
@@ -32,16 +31,31 @@ const (
 	unitActiveState = "active"
 	unitLoadedState = "loaded"
 
-	unitTypeUnit    = "Unit"
-	unitTypeService = "Service"
-	unitTypeSocket  = "Socket"
-
-	serviceSuffix = "service"
+	typeUnit    = "unit"
+	typeService = "service"
+	typeSocket  = "socket"
 
 	canConnectServiceCheck  = "systemd.can_connect"
 	systemStateServiceCheck = "systemd.system.state"
 	unitStateServiceCheck   = "systemd.unit.state"
 )
+
+var dbusTypeMap = map[string]string{
+	typeUnit:    "Unit",
+	typeService: "Service",
+	typeSocket:  "Socket",
+}
+
+type unit struct {
+	dbus.UnitStatus
+	TasksCurrent  uint64
+	NRestarts     uint32
+	CPUUsageNSec  uint64
+	CPUAccounting bool
+	// acceptedConnections uint32
+	// currentConnections  uint32
+	// refusedConnections  *uint32
+}
 
 // serviceUnitConfig is a config/mapping of services properties (a service is a unit of service type).
 // Each config define a metric to be monitored, how it should be retrieved and processed.
@@ -49,14 +63,47 @@ type serviceUnitConfig struct {
 	metricName         string
 	propertyName       string
 	accountingProperty string
-	required           bool // if required log as error when there is an issue getting the property, otherwise log as debug
+	optional           bool // if optional log as debug when there is an issue getting the property, otherwise log as error
 }
 
-var serviceUnitConfigList = []serviceUnitConfig{
-	{metricName: "systemd.service.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", required: true},
-	{metricName: "systemd.service.memory_current", propertyName: "MemoryCurrent", accountingProperty: "MemoryAccounting", required: true},
-	{metricName: "systemd.service.tasks_current", propertyName: "TasksCurrent", accountingProperty: "TasksAccounting", required: true},
-	{metricName: "systemd.service.n_restarts", propertyName: "NRestarts", accountingProperty: "", required: false}, // only present from systemd v235
+var metricsConfig = map[string][]serviceUnitConfig{
+	"service": {
+		{
+			metricName:         "systemd.service.cpu_usage_n_sec",
+			propertyName:       "CPUUsageNSec",
+			accountingProperty: "CPUAccounting",
+		},
+		{
+			metricName:         "systemd.service.memory_current",
+			propertyName:       "MemoryCurrent",
+			accountingProperty: "MemoryAccounting",
+		},
+		{
+			metricName:         "systemd.service.tasks_current",
+			propertyName:       "TasksCurrent",
+			accountingProperty: "TasksAccounting",
+		},
+		{
+			// only present from systemd v235
+			metricName:   "systemd.service.n_restarts",
+			propertyName: "NRestarts",
+			optional:     true,
+		},
+	},
+	// "socket": {
+	// 	{
+	// 		metricName:   "systemd.socket.n_accepted",
+	// 		propertyName: "NAccepted",
+	// 	},
+	// 	{
+	// 		metricName:   "systemd.socket.n_connections",
+	// 		propertyName: "NConnections",
+	// 	},
+	// 	{
+	// 		metricName:   "systemd.socket.n_refused",
+	// 		propertyName: "NRefused",
+	// 	},
+	// },
 }
 
 var unitActiveStates = []string{"active", "activating", "inactive", "deactivating", "failed"}
@@ -204,9 +251,7 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		if unit.ActiveState != unitActiveState {
 			continue
 		}
-		if strings.HasSuffix(unit.Name, "."+serviceSuffix) {
-			c.submitServiceMetrics(sender, conn, unit, tags)
-		}
+		c.submitPropertyMetricsAsGauge(sender, conn, unit, tags)
 	}
 
 	sender.Gauge("systemd.unit.loaded.count", float64(loadedCount), "", nil)
@@ -215,7 +260,7 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 }
 
 func (c *Check) submitMonitoredUnitMetrics(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
-	unitProperties, err := c.stats.GetUnitTypeProperties(conn, unit.Name, unitTypeUnit)
+	unitProperties, err := c.stats.GetUnitTypeProperties(conn, unit.Name, dbusTypeMap[typeUnit])
 	if err != nil {
 		log.Errorf("Error getting unit unitProperties: %s", unit.Name)
 		return
@@ -256,21 +301,22 @@ func (c *Check) submitCounts(sender aggregator.Sender, units []dbus.UnitStatus) 
 	}
 }
 
-func (c *Check) submitServiceMetrics(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
-	serviceProperties, err := c.stats.GetUnitTypeProperties(conn, unit.Name, unitTypeService)
-	if err != nil {
-		log.Errorf("Error getting serviceProperties for service: %s", unit.Name)
-		return
-	}
-
-	for _, service := range serviceUnitConfigList {
-		err := sendServicePropertyAsGauge(sender, serviceProperties, service, tags)
+func (c *Check) submitPropertyMetricsAsGauge(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
+	for unitType := range metricsConfig {
+		serviceProperties, err := c.stats.GetUnitTypeProperties(conn, unit.Name, dbusTypeMap[unitType])
 		if err != nil {
-			msg := fmt.Sprintf("Cannot send property '%s' for unit '%s': %v", service.propertyName, unit.Name, err)
-			if service.required {
-				log.Errorf(msg)
-			} else {
-				log.Debugf(msg)
+			log.Errorf("Error getting serviceProperties for service: %s", unit.Name)
+			return
+		}
+		for _, service := range metricsConfig[unitType] {
+			err := sendServicePropertyAsGauge(sender, serviceProperties, service, tags)
+			if err != nil {
+				msg := fmt.Sprintf("Cannot send property '%s' for unit '%s': %v", service.propertyName, unit.Name, err)
+				if service.optional {
+					log.Errorf(msg)
+				} else {
+					log.Debugf(msg)
+				}
 			}
 		}
 	}
@@ -328,11 +374,11 @@ func getPropertyString(properties map[string]interface{}, propertyName string) (
 	if !ok {
 		return "", fmt.Errorf("Property %s not found", propertyName)
 	}
-	propString, ok := prop.(string)
+	propValue, ok := prop.(string)
 	if !ok {
 		return "", fmt.Errorf("Property %s (%T) cannot be converted to string", propertyName, prop)
 	}
-	return propString, nil
+	return propValue, nil
 }
 
 func getPropertyBool(properties map[string]interface{}, propertyName string) (bool, error) {
@@ -340,11 +386,11 @@ func getPropertyBool(properties map[string]interface{}, propertyName string) (bo
 	if !ok {
 		return false, fmt.Errorf("Property %s not found", propertyName)
 	}
-	propString, ok := prop.(bool)
+	propValue, ok := prop.(bool)
 	if !ok {
 		return false, fmt.Errorf("Property %s (%T) cannot be converted to bool", propertyName, prop)
 	}
-	return propString, nil
+	return propValue, nil
 }
 
 func getServiceCheckStatus(activeState string) metrics.ServiceCheckStatus {

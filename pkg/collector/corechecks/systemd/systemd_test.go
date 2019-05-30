@@ -224,7 +224,7 @@ func TestOverallMetrics(t *testing.T) {
 		{Name: "unit8.service", ActiveState: "failed", SubState: "my_substate", LoadState: "loaded"},
 	}, nil)
 
-	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, unitTypeService).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, dbusTypeMap[typeService]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(999),
 	}, nil)
 
@@ -278,27 +278,27 @@ unit_names:
 	}, nil)
 	stats.On("TimeNanoNow").Return(int64(1000 * 1000))
 
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", unitTypeService).Return(getCreatePropertieWithDefaults(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", dbusTypeMap[typeService]).Return(getCreatePropertieWithDefaults(map[string]interface{}{
 		"CPUUsageNSec":  uint64(10),
 		"MemoryCurrent": uint64(20),
 		"TasksCurrent":  uint64(30),
 		"NRestarts":     uint64(40),
 	}), nil)
 
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", unitTypeService).Return(getCreatePropertieWithDefaults(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", dbusTypeMap[typeService]).Return(getCreatePropertieWithDefaults(map[string]interface{}{
 		"CPUUsageNSec":  uint64(110),
 		"MemoryCurrent": uint64(120),
 		"TasksCurrent":  uint64(130),
 		"NRestarts":     uint64(140),
 	}), nil)
 
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", unitTypeUnit).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", dbusTypeMap[typeUnit]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(100),
 	}, nil)
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", unitTypeUnit).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", dbusTypeMap[typeUnit]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(200),
 	}, nil)
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit3.service", unitTypeUnit).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit3.service", dbusTypeMap[typeUnit]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(300),
 	}, nil)
 
@@ -360,13 +360,13 @@ unit_names:
 		{Name: "unit4.service", ActiveState: "active", SubState: "my_substate", LoadState: "loaded"},
 	}, nil)
 	stats.On("TimeNanoNow").Return(int64(1000 * 1000))
-	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, unitTypeService).Return(getCreatePropertieWithDefaults(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, dbusTypeMap[typeService]).Return(getCreatePropertieWithDefaults(map[string]interface{}{
 		"CPUUsageNSec":  uint64(10),
 		"MemoryCurrent": uint64(20),
 		"TasksCurrent":  uint64(30),
 		"NRestarts":     uint64(40),
 	}), nil)
-	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, unitTypeUnit).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, dbusTypeMap[typeUnit]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(100),
 	}, nil)
 
@@ -423,16 +423,16 @@ unit_names:
 	}, nil)
 	stats.On("TimeNanoNow").Return(int64(1000 * 1000))
 
-	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, unitTypeService).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, dbusTypeMap[typeService]).Return(map[string]interface{}{
 		"CPUUsageNSec":  uint64(1),
 		"MemoryCurrent": uint64(1),
 		"TasksCurrent":  uint64(1),
 	}, nil)
 
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", unitTypeUnit).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", dbusTypeMap[typeUnit]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(100),
 	}, nil)
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", unitTypeUnit).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", dbusTypeMap[typeUnit]).Return(map[string]interface{}{
 		"ActiveEnterTimestamp": uint64(200),
 	}, nil)
 
@@ -479,9 +479,9 @@ unit_names:
 		{Name: "unit2.service", ActiveState: "active", SubState: "my_substate"},
 	}, nil)
 	stats.On("TimeNanoNow").Return(int64(1000 * 1000))
-	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, unitTypeUnit).Return(map[string]interface{}{}, nil)
+	stats.On("GetUnitTypeProperties", mock.Anything, mock.Anything, dbusTypeMap[typeUnit]).Return(map[string]interface{}{}, nil)
 
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", unitTypeService).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit1.service", dbusTypeMap[typeService]).Return(map[string]interface{}{
 		"CPUUsageNSec":     uint64(1),
 		"CPUAccounting":    true,
 		"MemoryCurrent":    uint64(1),
@@ -491,7 +491,7 @@ unit_names:
 		"NRestarts":        uint32(1),
 	}, nil)
 
-	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", unitTypeService).Return(map[string]interface{}{
+	stats.On("GetUnitTypeProperties", mock.Anything, "unit2.service", dbusTypeMap[typeService]).Return(map[string]interface{}{
 		"CPUUsageNSec":     uint64(1),
 		"CPUAccounting":    true,
 		"MemoryCurrent":    uint64(1),
@@ -526,12 +526,12 @@ unit_names:
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.service.tasks_current", mock.Anything, "", tags)
 }
 
-func TestsendServicePropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
+func TestSendServicePropertyAsGaugeSkipAndWarnOnMissingProperty(t *testing.T) {
 	serviceProperties := getCreatePropertieWithDefaults(map[string]interface{}{
 		"CPUUsageNSec": uint64(110),
 	})
-	serviceUnitConfigCPU := serviceUnitConfig{metricName: "systemd.service.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", required: true}
-	serviceUnitConfigNRestart := serviceUnitConfig{metricName: "systemd.service.n_restarts", propertyName: "NRestarts", accountingProperty: "", required: true}
+	serviceUnitConfigCPU := serviceUnitConfig{metricName: "systemd.service.cpu_usage_n_sec", propertyName: "CPUUsageNSec", accountingProperty: "CPUAccounting", optional: false}
+	serviceUnitConfigNRestart := serviceUnitConfig{metricName: "systemd.service.n_restarts", propertyName: "NRestarts", accountingProperty: "", optional: false}
 
 	check := Check{}
 	mockSender := mocksender.NewMockSender(check.ID())
