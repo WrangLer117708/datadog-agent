@@ -252,8 +252,14 @@ unit_names:
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.active.count", float64(3), "", []string(nil))
 	mockSender.AssertCalled(t, "Gauge", "systemd.unit.loaded.count", float64(6), "", []string(nil))
 
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.count", float64(3), "", []string{unitActiveStateTag + ":" + "active"})
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.count", float64(1), "", []string{unitActiveStateTag + ":" + "activating"})
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.count", float64(2), "", []string{unitActiveStateTag + ":" + "inactive"})
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.count", float64(1), "", []string{unitActiveStateTag + ":" + "deactivating"})
+	mockSender.AssertCalled(t, "Gauge", "systemd.unit.count", float64(1), "", []string{unitActiveStateTag + ":" + "failed"})
+
 	mockSender.AssertNumberOfCalls(t, "ServiceCheck", 2)
-	mockSender.AssertNumberOfCalls(t, "Gauge", 2)
+	mockSender.AssertNumberOfCalls(t, "Gauge", 7)
 	mockSender.AssertNumberOfCalls(t, "Commit", 1)
 }
 
@@ -332,7 +338,7 @@ unit_names:
 	tags = []string{"unit:unit3.service"}
 	mockSender.AssertNotCalled(t, "Gauge", "systemd.unit.cpu_usage_n_sec", mock.Anything, "", tags)
 
-	expectedGaugeCalls := 2     /* overall metrics */
+	expectedGaugeCalls := 7     /* overall metrics */
 	expectedGaugeCalls += 2 * 7 /* unit/service metrics */
 	mockSender.AssertNumberOfCalls(t, "Gauge", expectedGaugeCalls)
 	mockSender.AssertNumberOfCalls(t, "Commit", 1)

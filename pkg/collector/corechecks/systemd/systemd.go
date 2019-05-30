@@ -65,6 +65,8 @@ var unitActiveStateList = []struct {
 	{"systemd.unit.active.count", "active"},
 }
 
+var unitActiveStates = []string{"active", "activating", "inactive", "deactivating", "failed"}
+
 var systemdStatusMapping = map[string]metrics.ServiceCheckStatus{
 	"initializing": metrics.ServiceCheckUnknown,
 	"starting":     metrics.ServiceCheckUnknown,
@@ -189,6 +191,8 @@ func (c *Check) submitUnitMetrics(sender aggregator.Sender, conn *dbus.Conn) err
 		return fmt.Errorf("Error getting list of units: %v", err)
 	}
 
+	c.submitCounts(sender, units)
+
 	activeCount := 0
 	loadedCount := 0
 	for _, unit := range units {
@@ -244,6 +248,23 @@ func (c *Check) submitMonitoredUnitMetrics(sender aggregator.Sender, conn *dbus.
 	sender.Gauge("systemd.unit.active", float64(active), "", tags)
 	sender.Gauge("systemd.unit.loaded", float64(loaded), "", tags)
 	sender.Gauge("systemd.unit.uptime", float64(computeUptime(unit.ActiveState, ActiveEnterTimestamp, c.stats.TimeNanoNow())), "", tags)
+}
+
+func (c *Check) submitCounts(sender aggregator.Sender, units []dbus.UnitStatus) {
+	counts := map[string]int{}
+
+	for _, activeState := range unitActiveStates {
+		counts[activeState] = 0
+	}
+
+	for _, unit := range units {
+		counts[unit.ActiveState]++
+	}
+
+	for _, activeState := range unitActiveStates {
+		count := counts[activeState]
+		sender.Gauge("systemd.unit.count", float64(count), "", []string{unitActiveStateTag + ":" + activeState})
+	}
 }
 
 func (c *Check) submitServiceMetrics(sender aggregator.Sender, conn *dbus.Conn, unit dbus.UnitStatus, tags []string) {
