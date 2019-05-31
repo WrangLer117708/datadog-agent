@@ -19,7 +19,7 @@ import (
 type Pipeline struct {
 	InputChan chan *message.Message
 	processor *processor.Processor
-	sender    *sender.Sender
+	sender    sender.Sender
 }
 
 // NewPipeline returns a new Pipeline
@@ -41,14 +41,14 @@ func NewPipeline(outputChan chan *message.Message, processingRules []*config.Pro
 		destinations = client.NewDestinations(main, additionals)
 	}
 
-	var payload sender.Payload
-	if endpoints.UseHTTP {
-		payload = sender.NewBatchPayload(sender.LineFormatter)
-	} else {
-		payload = sender.NewSinglePayload()
-	}
 	senderChan := make(chan *message.Message, config.ChanSize)
-	sender := sender.NewSender(senderChan, outputChan, destinations, payload)
+
+	var newSender sender.Sender
+	if endpoints.UseHTTP {
+		newSender = sender.NewBatchSender(senderChan, outputChan, destinations, formatter.LineFormatter)
+	} else {
+		newSender = sender.NewStreamSender(senderChan, outputChan, destinations)
+	}
 
 	var encoder processor.Encoder
 	if endpoints.UseHTTP {
@@ -65,7 +65,7 @@ func NewPipeline(outputChan chan *message.Message, processingRules []*config.Pro
 	return &Pipeline{
 		InputChan: inputChan,
 		processor: processor,
-		sender:    sender,
+		sender:    newSender,
 	}
 }
 

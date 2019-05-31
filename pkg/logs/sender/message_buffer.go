@@ -6,36 +6,26 @@
 package sender
 
 import (
-	"time"
-
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 )
 
 const (
-	batchTimeout   = 5 * time.Second
 	maxBatchSize   = 20
 	maxContentSize = 1000000
 )
 
-type BatchPayload struct {
-	formatter     Formatter
+type MessageBuffer struct {
 	messageBuffer []*message.Message
 	contentSize   int
-	flushTimer    *time.Timer
-	isReady       <-chan time.Time
 }
 
-func NewBatchPayload(formatter Formatter) *BatchPayload {
-	flushTimer := time.NewTimer(batchTimeout)
-	return &BatchPayload{
-		formatter:     formatter,
+func NewMessageBuffer() *MessageBuffer {
+	return &MessageBuffer{
 		messageBuffer: make([]*message.Message, 0, maxBatchSize),
-		flushTimer:    flushTimer,
-		isReady:       flushTimer.C,
 	}
 }
 
-func (p *BatchPayload) AddMessage(message *message.Message) bool {
+func (p *MessageBuffer) AddMessage(message *message.Message) bool {
 	contentSize := len(message.Content)
 	if len(p.messageBuffer) < cap(p.messageBuffer) && p.contentSize+contentSize <= maxContentSize {
 		p.messageBuffer = append(p.messageBuffer, message)
@@ -45,30 +35,18 @@ func (p *BatchPayload) AddMessage(message *message.Message) bool {
 	return false
 }
 
-func (p *BatchPayload) Clear() {
+func (p *MessageBuffer) Clear() {
 	p.messageBuffer = p.messageBuffer[:0]
-	if !p.flushTimer.Stop() {
-		<-p.flushTimer.C
-	}
-	p.flushTimer.Reset(batchTimeout)
 }
 
-func (p *BatchPayload) GetContent() []byte {
-	return p.formatter.Format(p.messageBuffer)
-}
-
-func (p *BatchPayload) GetMessages() []*message.Message {
+func (p *MessageBuffer) GetMessages() []*message.Message {
 	return p.messageBuffer
 }
 
-func (p *BatchPayload) IsFull() bool {
+func (p *MessageBuffer) IsFull() bool {
 	return len(p.messageBuffer) == cap(p.messageBuffer)
 }
 
-func (p *BatchPayload) IsEmpty() bool {
+func (p *MessageBuffer) IsEmpty() bool {
 	return len(p.messageBuffer) == 0
-}
-
-func (p *BatchPayload) IsReady() <-chan time.Time {
-	return p.isReady
 }
